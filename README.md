@@ -4,6 +4,9 @@ Training and script processing for NLNT level 1 and 2.
 Current iteration uses 3000 samples using an automated script.
 Models will be posted in a Google Drive folder once trained.
 
+Current iteration will use Gemma 2B and 7B as a base model.
+Will experiment with Mistral 7B once it is available.
+
 # Data packet structure
     {
     username : ...,
