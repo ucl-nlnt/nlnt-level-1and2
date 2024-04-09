@@ -119,7 +119,6 @@ def create_training_entry_from_packet(data_packet, keyframe_indexes, bos = '<bos
     # Mistral: // to be filled out later
     # Llama: // to be filled out later
 
-
     prompt = data_packet['natural_language_prompt']
     kstates = prep_frame_data(data_packet['states'], keyframe_indexes)
 
@@ -129,7 +128,7 @@ def create_training_entry_from_packet(data_packet, keyframe_indexes, bos = '<bos
     state_number = 0
     for i in range(1,len(kstates)):
         
-        entry += ' [PRED] '
+        entry += ' [OBS] '
 
         current_kframe = kstates[i -1]
         next_kframe = kstates[i]
@@ -141,47 +140,41 @@ def create_training_entry_from_packet(data_packet, keyframe_indexes, bos = '<bos
         t = float(str(current_kframe['odometry']['time_sec']) + '.' + str(current_kframe['odometry']['time_nano']))
         t_next = float(str(next_kframe['odometry']['time_sec']) + '.' + str(next_kframe['odometry']['time_nano']))
         
-        dt = round(t_next - t, 2)
+        dt = round(t_next - t, 3)
 
         entry += str(
             
             {
                 'state number' : state_number,
                 'message' : current_kframe['twist'], 
-                'coordinates' : [round(i,2) for i in current_kframe['odometry']['pose_position']],
-                'radial' : [round(i,2) for i in current_kframe['odometry']['pose_orientation_quarternion']],
-                'dt' : dt,
-                'completed' : '#ONGOING' if i+1 != len(kstates) else "#COMPLETE"
+                'dt' : dt
             }
 
         )
 
         state_number += 1
-        training_examples.append(entry + ' ' + eos) # add to training examples
-        
-        if i+1 != len(kstates): entry = entry.replace('[PRED]', '[OBS]')
+    
+    training_examples.append(entry + ' ' + eos) # add to training examples
 
     return training_examples
 
-def read_and_process_all(data_path, size, bos, eos):
+def read_and_process_all(data_path, bos='<|endoftext|>', eos='<|endoftext|>'):
 
     entries = []
 
     paths = get_list_of_files(data_path)
-    random.shuffle(paths)
-    if size != -1:
-        paths = paths[:size]
 
     for path in paths:
         packet = open_data_packet(path)
-        training_entries = create_training_entry_from_packet(packet, find_keyframes_indexes(packet), bos=bos, eos=eos)
+        training_entries = create_training_entry_from_packet(packet, find_keyframes_indexes(packet), bos, eos)
         entries += training_entries
 
     print("number of training data entries:", len(entries))
     return entries
 
-entries = read_and_process_all('training_data_pre', size=3000, bos="<s>", eos="</s>")
+entries = read_and_process_all('training_data_pre', bos="<s>", eos="</s>")
 random.shuffle(entries)
+entries = entries[:5000] # limit data set count
 # print(entries[0])
 
 from transformers import AutoTokenizer
@@ -191,7 +184,7 @@ from transformers import AutoTokenizer
 
 # Initialize the tokenizer
 # Replace 'your_model_name' with the actual model name you're using, e.g., "bert-base-uncased"
-tokenizer_name = "mistralai/Mistral-7B-Instruct-v0.2"
+tokenizer_name = "google/gemma-1.1-2b-it"
 tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
 # Function to calculate the number of tokens in each entry
