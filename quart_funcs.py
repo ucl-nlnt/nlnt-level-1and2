@@ -11,9 +11,9 @@ def inverse_quarternion(quarternion_orientation: list):
 
     # assumes that [x, y, z, w]
     x, y, z, w = quarternion_orientation
-    norm_q = quart_norm(quarternion_orientation)
+    norm_q_sqrd = quart_norm(quarternion_orientation) ** 2
 
-    return (-x/norm_q, -y/norm_q, -z/norm_q, w/norm_q)
+    return (-x/norm_q_sqrd, -y/norm_q_sqrd, -z/norm_q_sqrd, w/norm_q_sqrd)
 
 def multiply_quarternions(quart_1: list, quart_2: list):
 
