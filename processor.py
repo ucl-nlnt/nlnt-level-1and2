@@ -138,11 +138,9 @@ def create_training_entry_from_packet(data_packet, keyframe_indexes, bos = '<bos
         # NOTE: this algorithm assumes that there are at least two states in the data packet
 
         # I try to not use words that are present in the natural language dataset for the state keys
-        t = float(str(current_kframe['odometry']['time_sec']) + '.' + str(current_kframe['odometry']['time_nano']))
-        t_next = float(str(next_kframe['odometry']['time_sec']) + '.' + str(next_kframe['odometry']['time_nano']))
         
-        dt = round(t_next - t, 2)
-
+        dt = (keyframe_indexes[i] - keyframe_indexes[i-1]) * 0.1
+        print(dt)
         entry += str(
             
             {
@@ -160,7 +158,7 @@ def create_training_entry_from_packet(data_packet, keyframe_indexes, bos = '<bos
         training_examples.append(entry + ' ' + eos) # add to training examples
         
         if i+1 != len(kstates): entry = entry.replace('[PRED]', '[OBS]')
-
+        break
     return training_examples
 
 def read_and_process_all(data_path, size, bos, eos):
@@ -181,6 +179,7 @@ def read_and_process_all(data_path, size, bos, eos):
     return entries
 
 entries = read_and_process_all('training_data_pre', size=3000, bos="<s>", eos="</s>")
+print(entries[0])
 random.shuffle(entries)
 # print(entries[0])
 
