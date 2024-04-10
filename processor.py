@@ -179,7 +179,7 @@ def read_and_process_all(data_path, size, bos, eos):
     return entries
 
 entries = read_and_process_all('training_data_pre', size=3000, bos="<s>", eos="</s>")
-print(entries[0])
+print(entries[-1])
 random.shuffle(entries)
 # print(entries[0])
 
