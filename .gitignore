@@ -4,3 +4,5 @@ ft_gemma_7B/*
 ft_llama_13B/*
 training_data_pre/*
 training_data_post/*
+__pycache__
+.DS_Store
