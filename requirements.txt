@@ -20,6 +20,8 @@ mpmath==1.3.0
 multidict==6.0.5
 multiprocess==0.70.16
 networkx==3.3
+nlnt-networking @ git+https://github.com/ucl-nlnt/KNetworking.git@ce402859c5e163fa40adc23d22bdeda15004e8dd
+nlnt-types @ git+https://github.com/ucl-nlnt/nlnt_types@625332a95cac9a1d39cc97df3ee0893fdb241a50
 numpy==1.26.4
 packaging==24.0
 pandas==2.2.2
