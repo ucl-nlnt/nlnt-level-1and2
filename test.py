@@ -162,10 +162,12 @@ class AutoDataCollector(Node):
 
     def manual(self):
 
-        while not self.sampling_start: time.sleep(0.1) # wait for data to be ready
+        # OLD IMPLEMENTATION
 
+        while not self.sampling_start: time.sleep(0.1) # wait for data to be ready
         
         data = """<s> [cmd] go a fifth of a meter backwards, then move yourself around three yardsticks in front of you [cmd_end] [OBS] {'state number': 0, 'message': {'linear': [0.0, 0.0, 0.0], 'angular': [0.0, 0.0, -1.5]}, 'coordinates': [0.0, 0.0, 0.0], 'radial': [0.0, -0.0, 0.0, 1.0], 'dt': 1.9, 'completed': '#ONGOING'} [OBS] {'state number': 1, 'message': {'linear': [0.0, 0.0, 0.0], 'angular': [0.0, 0.0, -0.2]}, 'coordinates': [0.01, -0.01, 0.0], 'radial': [0.01, -0.0, -0.98, 0.21], 'dt': 1.9, 'completed': '#ONGOING'} [OBS] {'state number': 2, 'message': {'linear': [0.0, 0.0, 0.0], 'angular': [0.0, 0.0, 0.0]}, 'coordinates': [0.01, -0.01, 0.0], 'radial': [0.01, -0.0, -1.0, -0.0], 'dt': 0.5, 'completed': '#ONGOING'} [OBS] {'state number': 3, 'message': {'linear': [0.2, 0.0, 0.0], 'angular': [0.0, 0.0, 0.0]}, 'coordinates': [0.01, -0.01, 0.0], 'radial': [0.01, -0.0, -1.0, -0.0], 'dt': 1.1, 'completed': '#ONGOING'} [OBS] {'state number': 4, 'message': {'linear': [0.05, 0.0, 0.0], 'angular': [0.0, 0.0, 0.0]}, 'coordinates': [-0.18, 0.05, -0.0], 'radial': [0.01, 0.0, -1.0, -0.01], 'dt': 0.1, 'completed': '#ONGOING'} [OBS] {'state number': 5, 'message': {'linear': [0.0, 0.0, 0.0], 'angular': [0.0, 0.0, 0.0]}, 'coordinates': [-0.2, 0.06, -0.0], 'radial': [0.01, -0.0, -1.0, -0.01], 'dt': 0.5, 'completed': '#ONGOING'} [OBS] {'state number': 6, 'message': {'linear': [0.2, 0.0, 0.0], 'angular': [0.0, 0.0, 0.0]}, 'coordinates': [-0.2, 0.06, 0.0], 'radial': [0.01, -0.0, -1.0, -0.01], 'dt': 13.7, 'completed': '#ONGOING'} [PRED] {'state number': 7, 'message': {'linear': [0.05, 0.0, 0.0], 'angular': [0.0, 0.0, 0.0]}, 'coordinates': [-2.8, 0.87, 0.0], 'radial': [0.01, -0.0, -1.0, -0.01], 'dt': 0.2, 'completed': '#COMPLETE'} </s>"""
+        
         test_data = data.replace('<s>','').replace('</s>','').split('[OBS]') # get rid of special mistral tokens
         prompt = test_data[0]
         test_data = test_data[1:]
@@ -374,8 +376,7 @@ class AutoDataCollector(Node):
                 self.rotate_to_orientation(delta, args.max_angular_z)
                 self.move_x_meters_feedback(distance, args.max_linear_x)
                 print(f"Reset location to origin. {self.odometry_msg_data_pos[0:2]}")
-
-            
+        
     def reset_distance_and_radians(self):
 
         self.distance_traveled = 0.0
@@ -413,7 +414,7 @@ class AutoDataCollector(Node):
             q = self.odometry_msg.pose.pose.orientation
             quart2 = (q.x,q.y,q.z,q.w)
             self.distance_traveled += math.sqrt((x1-x)**2 + (y1-y)**2 + (z1-z)**2)
-            self.radians_rotated += yaw_difference(quart2, quart)
+            self.radians_rotated += abs(round(yaw_difference(quart2, quart),4))
             # print((round(self.distance_traveled,2),round(self.radians_rotated * 180 / math.pi,2)))
 
         except Exception as e:
@@ -421,171 +422,111 @@ class AutoDataCollector(Node):
             print(e)
             pass
 
+        time.sleep(0.1)
+
     def print_log(self, mess:str):
 
         print(f"[AutoDataCollector: {time.ctime()}] " + mess)
 
-    def __publish_twist_message(self, linear_x, angular_z, db = False):
+    def __publish_twist_message(self, linear_x, angular_z):
+
 
         data = Twist()
         data.linear.x = linear_x
         data.angular.z = angular_z
         self.movement_publisher.publish(data)
-        if db: print(f"[Twist]: {linear_x}, {angular_z}")
+        
+        self.twist_timestamp = time.time()
+        if self.last_twist_timestamp != None:
+            print("Twist time delay:",self.twist_timestamp - self.last_twist_timestamp)
+        self.last_twist_timestamp = self.twist_timestamp
 
         return
 
-    def move_x_meters_feedback(self, distance, vel_x:float = 0.2): # accurate, works up to +- 0.005 meters
-
-        # TODO: implement deviation checks
+    def move_x_meters_feedback(self, distance, slowdown_threshold=0.2, vel_x:float = 0.2): # accurate, works up to +- 0.005 meters
 
         # implement here
-        current = deepcopy(self.distance_traveled) # updates at a separate thread
-        end_loop = False
-        while not end_loop:
+        start = self.odometry_msg_data_pos
+        self.distance_traveled = 0.0
+        switch = True
 
-            delta = distance - (self.distance_traveled - current) # should approach zero
-            
-            progress = delta / distance # should also approach zero
-            # print("linear_x: ",progress)
-            x = 0.2
-            
-            if delta > 0.025: # if delta is bigger than some amount
-                x = 0.2
-            
-            else:
-                x = 0.05
-
-            if progress < 0.001:
-                self.__publish_twist_message(0.0, 0.0)
-                end_loop = True
-                break
-
-            self.__publish_twist_message(linear_x = x, angular_z = 0.0)
-            time.sleep(0.1) # 10 hz to avoid overwhelming limited processor power
-
-        return delta
-    
-    def rotate_x_radians_right(self, angular_distance_radians, angl_vel_z:float = 1.5): # WARNING: only works from 0 to pi
-        
-        total_error = 0.0
-
-        number_of_180s = angular_distance_radians // 3.14
-        remainder = angular_distance_radians % 3.14
-        
-        while number_of_180s:
-            
-            current_orientation = quaternion_to_yaw(*self.odometry_msg_data)
-            target_orientation = normalize_radians(current_orientation - 3.14)  # normalize to -pi to pi
-
-            while True:
-
-                current_orientation = normalize_radians(quaternion_to_yaw(*self.odometry_msg_data))
-                rotation_remaining = -normalize_radians(target_orientation - current_orientation)
-
-                # print("rot_remaining:", rotation_remaining)
-                if rotation_remaining < args.threshold_angular:
-                    self.__publish_twist_message(0.0, 0.0)
-                    break
-
-                # Determine progress and adjust angular velocity accordingly
-
-                if rotation_remaining > 0.5:
-                    z = -angl_vel_z     # Negative value for right (clockwise) rotation
-
-                else:
-                    z = -0.2            # Maintain a minimum speed for final adjustments
-                self.__publish_twist_message(0.0, z)
-                time.sleep(0.1)
-                
-            number_of_180s -= 1
-            total_error += normalize_radians(target_orientation - quaternion_to_yaw(*self.odometry_msg_data))
-
-        current_orientation = quaternion_to_yaw(*self.odometry_msg_data)
-        target_orientation = normalize_radians(current_orientation - remainder) # move the remaining distance
-
-        while True:
-
-            current_orientation = normalize_radians(quaternion_to_yaw(*self.odometry_msg_data))
-            rotation_remaining = -normalize_radians(target_orientation - current_orientation)
-
-            # print("rot_remaining:", rotation_remaining)
-            if rotation_remaining < args.threshold_angular:
-                
-                self.__publish_twist_message(0.0, 0.0)
-                break
-
-            # Determine progress and adjust angular velocity accordingly
-
-            if rotation_remaining > 0.5:
-                z = -angl_vel_z     # Negative value for right (clockwise) rotation
-
-            else:
-                z = -0.2            # Maintain a minimum speed for final adjustments
-
-            self.__publish_twist_message(0.0, z)
+        while distance-slowdown_threshold > self.distance_traveled:
+            if switch:
+                self.__publish_twist_message(vel_x,0.0)
+                switch = False
             time.sleep(0.1)
 
-        total_error += normalize_radians(target_orientation - quaternion_to_yaw(*self.odometry_msg_data))
-        return total_error
-    
-    def rotate_x_radians_left(self, angular_distance_radians, angl_vel_z:float = 1.5): # WARNING: only works from 0 to pi
-        
-        total_error = 0.0
+        self.__publish_twist_message(0.0,0.0)
+        time.sleep(0.5)
 
-        number_of_180s = angular_distance_radians // 3.14
-        remainder = angular_distance_radians % 3.14
-
-        while number_of_180s:
-
-            current_orientation =  quaternion_to_yaw(*self.odometry_msg_data)
-            target_orientation = normalize_radians(current_orientation + 3.14) # normalize to -pi to pi
-
-            while True:
-
-                current_orientation = normalize_radians(quaternion_to_yaw(*self.odometry_msg_data))
-                rotation_remaining = normalize_radians(target_orientation - current_orientation)
-
-                if rotation_remaining < args.threshold_angular:
-                    self.__publish_twist_message(0.0, 0.0)
-                    break
-
-                if rotation_remaining > 0.5:
-                    z = angl_vel_z
-                else:
-                    z = 0.2
-
-                self.__publish_twist_message(0.0, z)
-                time.sleep(0.1)
-
-            number_of_180s -= 1
-            total_error += normalize_radians(target_orientation - quaternion_to_yaw(*self.odometry_msg_data))
-             
-        current_orientation = quaternion_to_yaw(*self.odometry_msg_data)
-        target_orientation = normalize_radians(current_orientation + remainder)
-
-        while True:
-
-            current_orientation = normalize_radians(quaternion_to_yaw(*self.odometry_msg_data))
-            rotation_remaining = normalize_radians(target_orientation - current_orientation)
-            
-            # print("rot_remaining:", rotation_remaining)
-
-            if rotation_remaining < args.threshold_angular:
-                self.__publish_twist_message(0.0, 0.0)
-                break
-
-            if rotation_remaining > 0.5:
-                z = angl_vel_z
-            else:
-                z = 0.2
-
-            self.__publish_twist_message(0.0,z)
-            
+        switch = True
+        while distance > self.distance_traveled:
+            if switch:
+                self.__publish_twist_message(0.05,0.0)
+                switch = False
             time.sleep(0.1)
+
         
-        total_error += normalize_radians(target_orientation - quaternion_to_yaw(*self.odometry_msg_data))
-        return total_error
+
+        self.__publish_twist_message(0.0,0.0)
+        time.sleep(0.5)
+        end = self.odometry_msg_data_pos
+        print(round(distance-compute_distance(start, end), 4))
+
+        return distance-compute_distance(start, end)
+
+    def rotate(self, angular_distance_radians, direction, slowdown_threshold = 0.4, angl_vel_z:float = 1.0):
+
+        print("Direction:", direction)
+        self.radians_rotated = 0.0
+        starting = self.odometry_msg_data
+
+        switch = True # this is done to get the min and max angular values
+        while angular_distance_radians-slowdown_threshold > self.radians_rotated:
+
+            if direction.lower() == "left":
+                
+                if switch:
+                    switch = False
+                    self.__publish_twist_message(0.0, angular_z=angl_vel_z)
+            elif direction.lower() == "right":
+                
+                if switch:
+                    switch = False
+                    self.__publish_twist_message(0.0, angular_z=-angl_vel_z)
+            else:
+                print("ERROR: invalid direction")
+                return
+            time.sleep(0.1)
+
+        self.__publish_twist_message(0.0,0.0)
+        time.sleep(0.5) # simulate inference
+
+        switch = True
+        while angular_distance_radians > self.radians_rotated:
+
+            if direction.lower() == "left":
+
+                if switch:
+                    switch = False
+                    self.__publish_twist_message(0.0, angular_z=0.2)
+            elif direction.lower() == "right":
+
+                if switch:
+                    switch = False
+                    self.__publish_twist_message(0.0,angular_z=-0.2)
+            else:
+                print("ERROR: invalid direction")
+                return
+            time.sleep(0.1)
+
+        self.__publish_twist_message(0.0,0.0)
+        time.sleep(0.5)
+
+        ending = self.odometry_msg_data
+        
+        print(f"Rotated {direction} degrees [Internal]:",round(self.radians_rotated * 180 / math.pi,3))
+        return round(self.radians_rotated * 180 / math.pi,3)
     
     def rotate_to_orientation(self, angle_in_radians: float, angl_vel_z: float = 1.5):
         
@@ -599,21 +540,11 @@ class AutoDataCollector(Node):
         
         elif delta > 0: # rotate left
     
-            if delta <= math.pi: # the current algo does not accommodate past 3.14
-                self.rotate_x_radians_left(abs(delta), angl_vel_z)
-            else:
-                self.rotate_x_radians_left(math.pi, angl_vel_z)
-                delta = desired - normalize_radians(quaternion_to_yaw(*self.odometry_msg_data))
-                self.rotate_x_radians_left(abs(delta), angl_vel_z)
-        
+            self.rotate(abs(delta), "left")
+
         else: # delta < 0
 
-            if abs(delta) <= math.pi:
-                self.rotate_x_radians_right(abs(delta), angl_vel_z)
-            else:
-                self.rotate_x_radians_right(math.pi, angl_vel_z)
-                delta = desired - normalize_radians(quaternion_to_yaw(*self.odometry_msg_data))
-                self.rotate_x_radians_right(abs(delta), angl_vel_z)
+            self.rotate(abs(delta), "right")
 
     def execute_twist_for_dt(self, linear_x = 0.0, angular_z = 0.0, dt = 0.0, db = False):
 
