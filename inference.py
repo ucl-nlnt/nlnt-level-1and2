@@ -12,9 +12,9 @@ def main(username, prompt):
     # url = 'http://localhost:8000/send-prompt'
 
     # supply username/prompt if they are not provided
-    if username is None:
-        username = input(chalk.yellow(
-            "Enter your username (red,gab,mara,rica): "))
+    #if username is None:
+    #    username = input(chalk.yellow(
+    #        "Enter your username (red,gab,mara,rica): "))
     if prompt is None:
         prompt = input(chalk.yellow("Enter your prompt: "))
 
@@ -35,6 +35,8 @@ def main(username, prompt):
         print(chalk.magenta("response received!"),
               f'{round(elapsed_time, 2)} seconds')
 
+        print(response)
+        
         json_object = response.json()
         json_formatted_str = json.dumps(json_object, indent=2)
         print(json_formatted_str)
