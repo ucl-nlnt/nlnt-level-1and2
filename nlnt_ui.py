@@ -40,9 +40,12 @@ def nlnt (vid_check, prompt, video, history="None"):
         history = []
 
         while returned["instruction complete"] == "#ongoing":       # JSON bug here where it doesn't recognize dictionary
-            returned = json.loads(x[:])
-            history.append(x[:])
+            # send x to Turtlebot using TCP => Turtlebot churva
+            # receive y from turtlebot using TCP
+
+            history.append(y[:])
             x = main(prompt, history)
+
             #print(x)
         
         return x_dict
