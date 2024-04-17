@@ -51,7 +51,7 @@ class inferenceServer:
             self.model = None
             torch.cuda.empty_cache()
             gc.collect()
-            self.model = AutoModelForCausalLM.from_pretrained(self.loaded_model_namen, device_map = "auto")
+            self.model = AutoModelForCausalLM.from_pretrained(self.loaded_model_name, device_map = "auto")
             self.load_tokenizer(self.loaded_model_name)
 
         except Exception as e:
@@ -76,6 +76,7 @@ app = FastAPI()
 class Prompt(BaseModel):
 
     content: str
+    history: list
 
 class Generated(BaseModel):
 
