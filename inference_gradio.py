@@ -20,7 +20,7 @@ def main(prompt, history="None"):
 
     # TODO: format prompt
 
-    prompt = "You are given the task to act as a helpful agent that pilots a robot. Given the the frame history, determine the next frame in the series given the prompt and the previous state. Expect that any given data will be in the form of a JSON, and it is also expected that your reply will be also in JSON format. Set the 'completed' flag to '#complete' when you are done, otherwise leave it as '#ongoing'. Here is your task: " + prompt + " | History: [ " + history + " ] ### Answer:"
+    prompt = "You are given the task to act as a helpful agent that pilots a robot. Given the the frame history, determine the next frame in the series given the prompt and the previous state. Expect that any given data will be in the form of a JSON, and it is also expected that your reply will be also in JSON format. Set the 'completed' flag to '#complete' when you are done, otherwise leave it as '#ongoing'. Here is your task: " + prompt + " | History: [ " + str(history) + " ] ### Answer:"
 
     headers = {'Content-Type': 'application/json'}
     data = {'content': prompt}

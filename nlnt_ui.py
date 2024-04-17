@@ -1,4 +1,5 @@
 ## with CSS & livestreaming (WORKS !)
+# documentation for ASR Demo with Transformers : https://www.gradio.app/guides/real-time-speech-recognition
 # documentation for livestreaming: https://www.gradio.app/guides/reactive-interfaces
 
 import gradio as gr
@@ -25,35 +26,45 @@ def transcribe(audio):
 
     return transcriber({"sampling_rate": sr, "raw": y})["text"]
 
-def nlnt (vid_check, prompt, video, history="None"):
+def nlnt (vid_check, prompt, video, history="None", progress=gr.Progress()):
+  progress(0, desc="Starting...")
+
   if vid_check == True:
         return level3_model(prompt, video)
   else:
-        #You are given the task to act as a helpful agent that pilots a robot. Given the the frame history, determine the next frame in the series given the prompt and the previous state. Expect that any given data will be in the form of a JSON, and it is also expected that your reply will be also in JSON format. Set the 'completed' flag to '#complete' when you are done, otherwise leave it as '#ongoing'. Here is your task: Please get yourself rightwards by about six full centimeters, then coast to your right  a whole meter, then advance nine full centimeters backwards.. | History: [ None ] ### Answer:
-        #add_prompt = "You are given the task to act as a helpful agent that pilots a robot. Given the the frame history, determine the next frame in the series given the prompt and the previous state. Expect that any given data will be in the form of a JSON, and it is also expected that your reply will be also in JSON format. Set the 'completed' flag to '#complete' when you are done, otherwise leave it as '#ongoing'. Here is your task: " + prompt + " | History: [ " + history + " ] ### Answer:"
+        # Level 2 Model
+
         x = json.dumps(main(prompt))
         x_dict = json.loads(x)
         
         #print(x)
 
-        returned = json.loads(x)
         history = []
 
-        while returned["instruction complete"] == "#ongoing":       # JSON bug here where it doesn't recognize dictionary
+        #while x_dict["instruction complete"] == "#ongoing" in returned:       # JSON bug here where it doesn't recognize dictionary 
+        while "#ongoing" in x:
             # send x to Turtlebot using TCP => Turtlebot churva
+            # send json string to Turtlebot
+            # send x_dict["movement message"]
             # receive y from turtlebot using TCP
+            # x_dict["orientation"] = actual_orientation
+            # x_dict["distance to next point"] = actual_distance
+            # x_dict["execution length"] = actual_execution length
+            # send json string back and append to history
+            # {
+            #   "state number": "0x2", 
+            #   "orientation": 1.29, 
+            #   "distance to next point": 0.001, 
+            #   "execution length": 1.402, 
+            #   "movement message": (0.0, 0.2), 
+            #   "instruction complete": "#complete"
+            # }
 
-            history.append(y[:])
+            history.append(x[:])
             x = main(prompt, history)
 
             #print(x)
-        
-        return x_dict
-    #main(prompt)
-      #return level2_model(prompt)
-
-def level2_model (prompt):
-    return "level 2: " + prompt
+        return x
 
 def level3_model (prompt, video):
     return "level 3: " + prompt
