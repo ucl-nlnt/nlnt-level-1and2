@@ -11,11 +11,14 @@ def main(username, prompt):
     url = 'http://10.158.18.253:8000/send-prompt'
     # url = 'http://localhost:8000/send-prompt'
 
+    # supply username/prompt if they are not provided
     if username is None:
         username = input(chalk.yellow(
             "Enter your username (red,gab,mara,rica): "))
     if prompt is None:
         prompt = input(chalk.yellow("Enter your prompt: "))
+
+    # TODO: format prompt
 
     headers = {'Content-Type': 'application/json'}
     data = {'content': prompt}
@@ -23,12 +26,15 @@ def main(username, prompt):
     try:
         print(chalk.magenta("sending prompt to inference server..."))
         start_time = time.time()
+
         response = requests.post(url, json=data, headers=headers)
         response.raise_for_status()
+
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(chalk.magenta("response received!"),
               f'{round(elapsed_time, 2)} seconds')
+
         json_object = response.json()
         json_formatted_str = json.dumps(json_object, indent=2)
         print(json_formatted_str)
