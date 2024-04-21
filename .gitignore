@@ -4,5 +4,12 @@ ft_gemma_7B/*
 ft_llama_13B/*
 training_data_pre/*
 training_data_post/*
+training_data_pre_processed/*
+twistless/*
+v1/*
+bogus/*
+ft_phi_2B/*
+mistral_base/*
+redundant/*
 __pycache__
 .DS_Store
