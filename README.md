@@ -25,7 +25,7 @@ To add the ff to the dataset:
     {
     username : ...,
     natural_language_prompt : ...,
-    generated_rephrasal : ...,             # NEW! Created after plugging into Llama 3
+    generated_rephrasal : ...,             # NEW! Created after plugging into Llama 3; MAY NOT ALWAYS EXIST.
     timestamp_s : ...,
     timestamp_float : ...,
     ground_truth : ...,
