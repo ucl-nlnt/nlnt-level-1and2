@@ -2,7 +2,7 @@ import json, zlib, os, shutil, threading
 
 # NOTE: does NOT delete files. Only moves them to another directory
 
-data_path = 'training_data_pre'
+data_path = 'training_data_pre_rephrased'
 redundant_files_path = 'redundant'
 
 redundant_files_path = os.path.join(os.getcwd(), redundant_files_path)

@@ -13,3 +13,11 @@ mistral_base/*
 redundant/*
 __pycache__
 .DS_Store
+impossible_and_unreasonable/*
+impossible_rephrased/*
+__pycache__/*
+no_possibility_label/*
+phi3_force_test_Q4_e2_r256/*
+phi3_force_test_Q4_e2_r256_new/*
+phi3_latest_Q4_new_e2/*
+training_data_pre_rephrased/*
